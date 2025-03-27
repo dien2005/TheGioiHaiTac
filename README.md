@@ -1,4 +1,4 @@
-**THẾ GIỚI HẢI TẶC**
+#THẾ GIỚI HẢI TẶC
 **Trạng thái bắt đầu**
 -	Người chơi bắt đầu ở Overworld tại node 0 hoặc trong level 0 tại vị trí do bản đồ Tiled xác định, với 5 máu, 0 xu, và chỉ level 0 được mở khóa.
  
