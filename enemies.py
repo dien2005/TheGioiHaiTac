@@ -62,6 +62,68 @@ class Tooth(pygame.sprite.Sprite):
                 else:
                     grid[(x, y)] = True  # Ngoài biên thì chặn
         return grid
+    def bfs(self, start, target):
+        from collections import deque
+        queue = deque([(start, [start])])
+        visited = set()
+        directions = [(1, 0), (-1, 0)]
+
+        while queue:
+            current, path = queue.popleft()
+            if current == target and current[1] == self.base_y:
+                return path
+            if current in visited:
+                continue
+            visited.add(current)
+
+            for dx, dy in directions:
+                neighbor = (current[0] + dx, current[1] + dy)
+                if (0 <= neighbor[0] < len(self.level.grid[0]) and
+                    0 <= neighbor[1] < len(self.level.grid) and
+                    self.level.grid[neighbor[1]][neighbor[0]] == 1 and
+                    self.has_floor_support(neighbor[0], neighbor[1]) and
+                    neighbor[1] == self.base_y and
+                    neighbor not in visited):
+                    queue.append((neighbor, path + [neighbor]))
+        return []
+    def local_beam_search(self, start, target, k=3, max_steps=30):
+        directions = [(1, 0), (-1, 0)]
+
+        def get_neighbors(node):
+            neighbors = []
+            for dx, dy in directions:
+                nx, ny = node[0] + dx, node[1] + dy
+                if (0 <= nx < len(self.level.grid[0]) and
+                    0 <= ny < len(self.level.grid) and
+                    self.level.grid[ny][nx] == 1 and
+                    self.has_floor_support(nx, ny) and
+                    ny == self.base_y):
+                    neighbors.append((nx, ny))
+            return neighbors
+
+        beams = [(start, [start])]
+
+        for _ in range(max_steps):
+            all_neighbors = []
+            for current, path in beams:
+                if current == target:
+                    return path
+                for neighbor in get_neighbors(current):
+                    if neighbor not in path:
+                        new_path = path + [neighbor]
+                        all_neighbors.append((neighbor, new_path))
+
+            if not all_neighbors:
+                break
+
+            # Chọn k đường đi tốt nhất
+            all_neighbors.sort(key=lambda x: self.heuristic(x[0], target))
+            beams = all_neighbors[:k]
+
+        # Nếu không tìm thấy, trả về đường đi ngắn nhất trong beams
+        if beams:
+            return min(beams, key=lambda x: self.heuristic(x[0], target))[1]
+        return []
 
     def dfs(self, start, target):
         visited = set()
@@ -331,7 +393,7 @@ class Tooth(pygame.sprite.Sprite):
                 self.path = self.dfs(start, target)
             elif self.algorithm == 'A*':
                 self.path = self.a_star(start, target)
-            elif self.algorithm == 'STEEPEST':
+            elif self.algorithm == 'HILL CLIMBING':
                 self.path = self.steepest_ascent(start, target)
             elif self.algorithm == 'ANNEALING':
                 self.path = self.simulated_annealing(start, target)
@@ -341,8 +403,13 @@ class Tooth(pygame.sprite.Sprite):
                 self.path = self.q_learning(start, target)
             elif self.algorithm == 'NO_OBSERVATION':
                 self.path = self.no_observation_search(start)
+            elif self.algorithm == 'BFS':
+                self.path = self.bfs(start, target)
+            elif self.algorithm == 'BEAM':
+                self.path = self.local_beam_search(start, target)
         else:
             self.path = []
+
 
     def move_along_path(self, dt):
         if vector(self.rect.center).distance_to(self.player.hitbox_rect.center) < self.vision_radius:
@@ -416,61 +483,59 @@ class Timer:
                 self.time_left = 0
 
 class Shell(pygame.sprite.Sprite):
-    def __init__(self, pos, frames, groups, reverse, player, create_pearl):
-        super().__init__(groups)
+	def __init__(self, pos, frames, groups, reverse, player, create_pearl):
+		super().__init__(groups)
 
-        if reverse:
-            self.frames = {}
-            for key, surfs in frames.items():
-                self.frames[key] = [pygame.transform.flip(surf, True, False) for surf in surfs]
-            self.bullet_direction = -1
-        else:
-            self.frames = frames 
-            self.bullet_direction = 1
-        
-        self.frame_index = 0
-        self.state = 'idle'
-        self.image = self.frames[self.state][self.frame_index]
-        self.rect = self.image.get_frect(topleft = pos)
-        self.old_rect = self.rect.copy()
-        self.z = Z_LAYERS['main']
-        self.player = player
-        self.shoot_timer = Timer(1000)
-        self.has_fired = False
-        self.create_pearl = create_pearl
+		if reverse:
+			self.frames = {}
+			for key, surfs in frames.items():
+				self.frames[key] = [pygame.transform.flip(surf, True, False) for surf in surfs]
+			self.bullet_direction = -1
+		else:
+			self.frames = frames 
+			self.bullet_direction = 1
 
-    def state_management(self):
-        player_pos, shell_pos = vector(self.player.hitbox_rect.center), vector(self.rect.center)
-        player_near = shell_pos.distance_to(player_pos) < 500
-        player_front = shell_pos.x < player_pos.x if self.bullet_direction > 0 else shell_pos.x > player_pos.x
-        player_level = abs(shell_pos.y - player_pos.y) < 100
-        if player_near and player_level and not self.shoot_timer.active:
-            self.state = 'fire'
-            self.frame_index = 0
-            self.shoot_timer.activate()
+		self.frame_index = 0
+		self.state = 'idle'
+		self.image = self.frames[self.state][self.frame_index]
+		self.rect = self.image.get_frect(topleft = pos)
+		self.old_rect = self.rect.copy()
+		self.z = Z_LAYERS['main']
+		self.player = player
+		self.shoot_timer = Timer(3000)
+		self.has_fired = False
+		self.create_pearl = create_pearl
 
-    def update(self, dt):
-        self.shoot_timer.update()
-        self.state_management()
+	def state_management(self):
+		player_pos, shell_pos = vector(self.player.hitbox_rect.center), vector(self.rect.center)
+		player_near = shell_pos.distance_to(player_pos) < 500
+		player_front = shell_pos.x < player_pos.x if self.bullet_direction > 0 else shell_pos.x > player_pos.x
+		player_level = abs(shell_pos.y - player_pos.y) < 30
 
-        # animation / attack 
-        self.frame_index += ANIMATION_SPEED * dt
-        if self.frame_index < len(self.frames[self.state]):
-            self.image = self.frames[self.state][int(self.frame_index)]
+		if player_near and player_front and player_level and not self.shoot_timer.active:
+			self.state = 'fire'
+			self.frame_index = 0
+			self.shoot_timer.activate()
 
-            # fire 
-            if self.state == 'fire' and int(self.frame_index) == 3 and not self.has_fired:
-                self.create_pearl(self.rect.center, self.bullet_direction)
-                self.has_fired = True 
-        else:
-            self.frame_index = 0
-            if self.state == 'fire':
-                self.state = 'idle'
-                self.has_fired = False
-        facing_right = self.player.rect.centerx > self.rect.centerx
-        self.image = self.frames[self.state][int(self.frame_index)]
-        if not facing_right:
-                self.image = pygame.transform.flip(self.image, True, False)	
+	def update(self, dt):
+		self.shoot_timer.update()
+		self.state_management()
+
+		# animation / attack 
+		self.frame_index += ANIMATION_SPEED * dt
+		if self.frame_index < len(self.frames[self.state]):
+			self.image = self.frames[self.state][int(self.frame_index)]
+
+			# fire 
+			if self.state == 'fire' and int(self.frame_index) == 3 and not self.has_fired:
+				self.create_pearl(self.rect.center, self.bullet_direction)
+				self.has_fired = True 
+
+		else:
+			self.frame_index = 0
+			if self.state == 'fire':
+				self.state = 'idle'
+				self.has_fired = False
 
 import pygame
 import random
@@ -479,25 +544,29 @@ from math import dist, exp
 from settings import *
 
 class Pearl(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, surf, player, grid, max_distance=150, algorithm='DFS'):
+    def __init__(self, pos, groups, surf, direction, speed):
+        self.pearl = True
         super().__init__(groups)
         self.image = surf
-        self.rect = self.image.get_rect(center=pos)
-        self.hitbox_rect = self.rect.copy()
+        self.rect = self.image.get_frect(center = pos + vector(50 * direction,0))
+        self.direction = direction
+        self.speed = speed
+        self.z = Z_LAYERS['main']
+        self.timers = {'lifetime': Timer(5000), 'reverse': Timer(250)}
+        self.timers['lifetime'].activate()
 
-        self.player = player
-        self.grid = grid
-        self.max_distance = max_distance
-        self.algorithm = algorithm
+    def reverse(self):
+        if not self.timers['reverse'].active:
+            self.direction *= -1 
+            self.timers['reverse'].activate()
 
-        self.speed = 200
-        self.path = []
-        self.path_index = 0
-        self.pos = pygame.Vector2(self.rect.center)
-        self.timer = 0
-        self.duration = 3  # seconds before self-destruct
+    def update(self, dt):
+        for timer in self.timers.values():
+            timer.update()
 
-        self.find_path()
+        self.rect.x += self.direction * self.speed * dt
+        if not self.timers['lifetime'].active:
+            self.kill()
 
     def grid_pos(self, pixel_pos):
         return int(pixel_pos[1] // TILE_SIZE), int(pixel_pos[0] // TILE_SIZE)
@@ -667,7 +736,7 @@ class Pearl(pygame.sprite.Sprite):
 
     def find_path(self):
         start = self.grid_pos(self.rect.center)
-        goal = self.grid_pos(self.player.rect.center)
+        goal = self.grid_pos(self.player)
 
         if self.algorithm == 'DFS':
             self.path = self.dfs(start, goal)
@@ -693,22 +762,3 @@ class Pearl(pygame.sprite.Sprite):
 
         self.path_index = 0
 
-    def update(self, dt):
-        self.timer += dt
-        if self.timer >= self.duration:
-            self.kill()
-            return
-
-        if self.path and self.path_index < len(self.path):
-            target_pos = self.pixel_pos(self.path[self.path_index])
-            direction = (target_pos - self.pos)
-            if direction.length() > 0:
-                direction = direction.normalize()
-                self.pos += direction * self.speed * dt
-                self.rect.center = self.pos
-                self.hitbox_rect.center = self.rect.center
-
-                if dist(self.pos, target_pos) < 5:
-                    self.path_index += 1
-        else:
-            self.kill()
