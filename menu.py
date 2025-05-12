@@ -28,7 +28,7 @@ class Menu:
 
         # Điều chỉnh thuật toán khi dòng hiện tại là "Algorithm: ..."
         if self.options[self.selected].startswith('Algorithm'):
-            algos = ['DFS', 'A*', 'ANNEALING', 'NO_OBSERVATION', 'BACKTRACKING', 'Q_LEARNING']
+            algos = ['DFS', 'A*', 'ANNEALING', 'NO_OBSERVATION', 'BACKTRACKING', 'Q_LEARNING', 'HILL CLAMBING', 'BFS', 'BEAM']
             current_index = algos.index(self.algorithm)
 
             if keys[pygame.K_RIGHT] and not self.prev_keys[pygame.K_RIGHT]:
