@@ -1,6 +1,6 @@
 # Game thế giới hải tặc
 
-Đây là một **game đi cảnh 2D** được xây dựng bằng **Python + Pygame**, nơi người chơi điều khiển nhân vật chính vượt qua các chướng ngại vật. Game tích hợp nhiều **thuật toán AI** để điều khiển kẻ địch (`Tooth`) và viên đạn (`Pearl`) nhằm truy đuổi người chơi một cách thông minh.
+Đây là một **game đi cảnh 2D** được xây dựng bằng **Python + Pygame**, nơi người chơi điều khiển nhân vật chính vượt qua các chướng ngại vật. Game tích hợp nhiều **thuật toán AI** để điều khiển kẻ địch (`Tooth`)  nhằm truy đuổi người chơi một cách thông minh.
 
 ## 🎮 Gameplay
 
