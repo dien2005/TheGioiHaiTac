@@ -214,16 +214,7 @@ class Level:
         self.update_grid()
 
     def create_pearl(self, pos, direction):
-        direction = pygame.math.Vector2(direction).normalize()
-        pearl = Pearl(
-            pos, 
-            (self.all_sprites, self.damage_sprites, self.pearl_sprites), 
-            self.pearl_surf, 
-            self.player, 
-            self.grid, 
-            150,
-            self.algorithm
-        )
+        Pearl(pos, (self.all_sprites, self.damage_sprites, self.pearl_sprites), self.pearl_surf, direction, 150)
         self.pearl_sound.play()
 
 
