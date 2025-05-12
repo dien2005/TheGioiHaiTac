@@ -25,7 +25,6 @@ class Tooth(pygame.sprite.Sprite):
         self.vision_radius = 300         # Tầm nhìn của Tooth (pixel)
         self.state = 'patrol'            # Trạng thái ban đầu
         self.search_direction = 1        # Dò trái/phải khi tuần tra
-
         # Q-Learning parameters
         self.q_table = {}  # Từ điển lưu giá trị Q: {x: [Q_trái, Q_phải]}
         self.alpha = 0.1   # Tỷ lệ học
@@ -518,24 +517,33 @@ class Shell(pygame.sprite.Sprite):
 			self.shoot_timer.activate()
 
 	def update(self, dt):
-		self.shoot_timer.update()
-		self.state_management()
+            self.shoot_timer.update()
+            self.state_management()
 
-		# animation / attack 
-		self.frame_index += ANIMATION_SPEED * dt
-		if self.frame_index < len(self.frames[self.state]):
-			self.image = self.frames[self.state][int(self.frame_index)]
+            self.frame_index += ANIMATION_SPEED * dt
+            if self.frame_index < len(self.frames[self.state]):
+                self.image = self.frames[self.state][int(self.frame_index)]
 
-			# fire 
-			if self.state == 'fire' and int(self.frame_index) == 3 and not self.has_fired:
-				self.create_pearl(self.rect.center, self.bullet_direction)
-				self.has_fired = True 
+                if self.state == 'fire' and int(self.frame_index) == 3 and not self.has_fired:
+                    direction_vector = (vector(self.player.rect.center) - vector(self.rect.center)).normalize()
+                    self.create_pearl(self.rect.center, direction_vector)
+                    self.has_fired = True
+            else:
+                self.frame_index = 0
+                if self.state == 'fire':
+                    self.state = 'idle'
+                    self.has_fired = False
 
-		else:
-			self.frame_index = 0
-			if self.state == 'fire':
-				self.state = 'idle'
-				self.has_fired = False
+            # ✅ Đây là phần bị lỗi vì đặt ngoài hàm: đặt vào đây là đúng
+            facing_right = self.player.rect.centerx > self.rect.centerx
+            self.bullet_direction = 1 if facing_right else -1
+            self.image = self.frames[self.state][int(self.frame_index)]
+            if not facing_right:
+                self.image = pygame.transform.flip(self.image, True, False)
+
+ 
+                
+        
 
 import pygame
 import random
@@ -551,6 +559,7 @@ class Pearl(pygame.sprite.Sprite):
         self.rect = self.image.get_frect(center = pos + vector(50 * direction,0))
         self.direction = direction
         self.speed = speed
+        self.pos = pygame.Vector2(self.rect.center) 
         self.z = Z_LAYERS['main']
         self.timers = {'lifetime': Timer(5000), 'reverse': Timer(250)}
         self.timers['lifetime'].activate()
@@ -564,7 +573,9 @@ class Pearl(pygame.sprite.Sprite):
         for timer in self.timers.values():
             timer.update()
 
-        self.rect.x += self.direction * self.speed * dt
+        self.pos += self.direction * self.speed * dt
+        self.rect.center = self.pos
+
         if not self.timers['lifetime'].active:
             self.kill()
 
