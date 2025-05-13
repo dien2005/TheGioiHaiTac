@@ -534,7 +534,7 @@ class Shell(pygame.sprite.Sprite):
                     self.state = 'idle'
                     self.has_fired = False
 
-            # ✅ Đây là phần bị lỗi vì đặt ngoài hàm: đặt vào đây là đúng
+            
             facing_right = self.player.rect.centerx > self.rect.centerx
             self.bullet_direction = 1 if facing_right else -1
             self.image = self.frames[self.state][int(self.frame_index)]
