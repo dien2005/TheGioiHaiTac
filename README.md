@@ -58,7 +58,7 @@ Tải Python 3.8+ tại: [https://www.python.org/downloads](https://www.python.o
 
 ### 2. Cài đặt thư viện
 ```bash
-pip install pygame pytmx numpy
+pip install pygame-ce pytmx numpy
 ```
 
 ## 📚 Tham khảo
