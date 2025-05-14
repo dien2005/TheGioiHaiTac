@@ -1,5 +1,4 @@
 # 🏴‍☠️ Game Thế Giới Hải Tặc
-![Game](./img/Game.gif)
 ![Thumbnail](./img/thumbnail.png)
 Đây là một **game đi cảnh 2D** được xây dựng bằng **Python + Pygame**, nơi người chơi điều khiển nhân vật chính vượt qua các chướng ngại vật. Game tích hợp nhiều **thuật toán AI** để điều khiển kẻ địch (`Tooth`) và (`Shell`) nhằm truy đuổi hoặc tấn công người chơi một cách thông minh.
 
@@ -49,6 +48,9 @@
 ### 🗺️ Giao diện chọn bản đồ
 ![Giao diện chọn map](./img/MapSelection.png)
 
+### 🕹️ Demo lối chơi
+Hình động dưới đây trình bày cách trò chơi vận hành thực tế.
+![demo](./img/demo.gif)
 ---
 
 ## 🛠️ Hướng dẫn cài đặt
