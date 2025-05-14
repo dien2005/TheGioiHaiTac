@@ -4,7 +4,7 @@ from timer import Timer
 import heapq
 import numpy as np
 from random import random
-
+import time
 class Tooth(pygame.sprite.Sprite):
     def __init__(self, pos, frames, groups, collision_sprites, player, level, algorithm):
         super().__init__(groups)
@@ -66,15 +66,16 @@ class Tooth(pygame.sprite.Sprite):
         queue = deque([(start, [start])])
         visited = set()
         directions = [(1, 0), (-1, 0)]
-
+        visited_count = 0
         while queue:
             current, path = queue.popleft()
             if current == target and current[1] == self.base_y:
+                print(f"[BFS] Nodes visited: {visited_count}")
                 return path
             if current in visited:
                 continue
             visited.add(current)
-
+            visited_count += 1
             for dx, dy in directions:
                 neighbor = (current[0] + dx, current[1] + dy)
                 if (0 <= neighbor[0] < len(self.level.grid[0]) and
@@ -84,6 +85,7 @@ class Tooth(pygame.sprite.Sprite):
                     neighbor[1] == self.base_y and
                     neighbor not in visited):
                     queue.append((neighbor, path + [neighbor]))
+        print(f"[BFS] Nodes visited: {visited_count}")
         return []
     def local_beam_search(self, start, target, k=3, max_steps=30):
         directions = [(1, 0), (-1, 0)]
@@ -101,16 +103,18 @@ class Tooth(pygame.sprite.Sprite):
             return neighbors
 
         beams = [(start, [start])]
-
+        visited_count = 0
         for _ in range(max_steps):
             all_neighbors = []
             for current, path in beams:
                 if current == target:
+                    print(f"[BEAM] Nodes visited: {visited_count}")
                     return path
                 for neighbor in get_neighbors(current):
                     if neighbor not in path:
                         new_path = path + [neighbor]
                         all_neighbors.append((neighbor, new_path))
+                        visited_count += 1
 
             if not all_neighbors:
                 break
@@ -118,13 +122,14 @@ class Tooth(pygame.sprite.Sprite):
             # Chọn k đường đi tốt nhất
             all_neighbors.sort(key=lambda x: self.heuristic(x[0], target))
             beams = all_neighbors[:k]
-
+        print(f"[BEAM] Nodes visited: {visited_count}")
         # Nếu không tìm thấy, trả về đường đi ngắn nhất trong beams
         if beams:
             return min(beams, key=lambda x: self.heuristic(x[0], target))[1]
         return []
 
     def dfs(self, start, target):
+        visited_count = 0
         visited = set()
         stack = [(start, [start])]
         directions = [(1, 0), (-1, 0)]  # Chỉ di chuyển ngang
@@ -132,11 +137,12 @@ class Tooth(pygame.sprite.Sprite):
         while stack:
             current, path = stack.pop()
             if current == target and current[1] == self.base_y:
+                print(f"[DFS] Nodes visited: {visited_count}")
                 return path
             if current in visited:
                 continue
             visited.add(current)
-
+            visited_count += 1
             for dx, dy in directions:
                 next_pos = (current[0] + dx, current[1] + dy)
                 if (0 <= next_pos[0] < len(self.level.grid[0]) and 
@@ -146,6 +152,7 @@ class Tooth(pygame.sprite.Sprite):
                     next_pos[1] == self.base_y and 
                     next_pos not in visited):
                     stack.append((next_pos, path + [next_pos]))
+        print(f"[DFS] Nodes visited: {visited_count}")
         return []
 
     def a_star(self, start, target):
@@ -154,17 +161,18 @@ class Tooth(pygame.sprite.Sprite):
         g_score = {start: 0}
         f_score = {start: self.heuristic(start, target)}
         directions = [(1, 0), (-1, 0)]  # Chỉ di chuyển ngang
-
+        visited_count = 0
         while open_set:
             current = heapq.heappop(open_set)[1]
             if current == target and current[1] == self.base_y:
+                print(f"[A*] Nodes visited: {visited_count}")
                 path = []
                 while current in came_from:
                     path.append(current)
                     current = came_from[current]
                 path.append(start)
                 return path[::-1]
-
+            visited_count += 1
             for dx, dy in directions:
                 neighbor = (current[0] + dx, current[1] + dy)
                 if (0 <= neighbor[0] < len(self.level.grid[0]) and 
@@ -178,6 +186,7 @@ class Tooth(pygame.sprite.Sprite):
                         g_score[neighbor] = tentative_g_score
                         f_score[neighbor] = g_score[neighbor] + self.heuristic(neighbor, target)
                         heapq.heappush(open_set, (f_score[neighbor], neighbor))
+        print(f"[A*] Nodes visited: {visited_count}")
         return []
 
     def steepest_ascent(self, start, target):
@@ -185,7 +194,7 @@ class Tooth(pygame.sprite.Sprite):
         current = start
         visited = set()
         path = [current]
-
+        visited_count = 0
         while True:
             best = None
             best_score = self.heuristic(current, target)
@@ -198,7 +207,7 @@ class Tooth(pygame.sprite.Sprite):
                     self.has_floor_support(next_node[0], next_node[1]) and
                     next_node[1] == self.base_y and
                     next_node not in visited):
-
+                    visited_count += 1
                     score = self.heuristic(next_node, target)
                     if score < best_score:
                         best = next_node
@@ -213,7 +222,7 @@ class Tooth(pygame.sprite.Sprite):
 
             if current == target:
                 break
-
+        print(f"[HILL CLIMBING] Nodes visited: {visited_count}")
         return path
     
     def simulated_annealing(self, start, target):
@@ -226,7 +235,7 @@ class Tooth(pygame.sprite.Sprite):
 
         current = start
         path = [current]
-
+        visited_count = 0
         def neighbors(pos):
             x, y = pos
             result = []
@@ -251,7 +260,7 @@ class Tooth(pygame.sprite.Sprite):
                 break
             next_node = choice(ns)
             next_cost = cost(next_node, target)
-
+            visited_count += 1
             delta = next_cost - current_cost
             if delta < 0 or random() < math.exp(-delta / T):
                 current = next_node
@@ -261,7 +270,7 @@ class Tooth(pygame.sprite.Sprite):
                     break
 
             T *= alpha  # làm nguội
-
+        print(f"[SIMULATED ANNEALING] Nodes visited: {visited_count}")
         return path
 
     def backtracking(self, start, target, visited=None, path=None, max_length=50):
@@ -275,6 +284,7 @@ class Tooth(pygame.sprite.Sprite):
         if len(path) > max_length:
             return []
         if start == target and start[1] == self.base_y:
+            print(f"[BACKTRACKING] Nodes visited: {len(visited)}")
             return path
 
         directions = [(1, 0), (-1, 0)]
@@ -307,7 +317,7 @@ class Tooth(pygame.sprite.Sprite):
         current_x = start[0]  # Trạng thái bắt đầu (tọa độ x)
         path = [start]
         steps = 0
-
+        visited_count = 0
         while steps < self.max_steps:
             self.initialize_q_table(current_x)
             # Chọn hành động (ε-greedy)
@@ -320,7 +330,7 @@ class Tooth(pygame.sprite.Sprite):
             dx = -1 if action_idx == 0 else 1
             next_x = current_x + dx
             next_pos = (next_x, self.base_y)
-
+            visited_count += 1
             # Kiểm tra tính hợp lệ và tính phần thưởng
             if (0 <= next_x < self.grid_width and 
                 self.level.grid[self.base_y][next_x] == 1 and 
@@ -354,7 +364,7 @@ class Tooth(pygame.sprite.Sprite):
             # Chuyển sang trạng thái tiếp theo
             current_x = next_x
             steps += 1
-
+        print(f"[Q-LEARNING] Nodes visited: {visited_count}")
         return path
 
     def no_observation_search(self, start):
@@ -363,7 +373,7 @@ class Tooth(pygame.sprite.Sprite):
             return []
         path = []
         x, y = start
-
+        visisted_node = 0
         for _ in range(10):  # Tối đa 10 bước dò
             next_x = x + self.search_direction
             if (0 <= next_x < len(self.level.grid[0]) and
@@ -372,9 +382,10 @@ class Tooth(pygame.sprite.Sprite):
                 self.has_floor_support(next_x, y)):
                 x = next_x
                 path.append((x, y))
+                visisted_node += 1
             else:
                 self.search_direction *= -1  # quay đầu nếu không đi được
-                
+        print(f"[NO OBSERVATION] Nodes visited: {visisted_node}")     
         return path
 
     def patrol_randomly(self):
@@ -382,6 +393,7 @@ class Tooth(pygame.sprite.Sprite):
         self.path = self.no_observation_search(start)
 
     def update_path(self):
+        start_time = time.time()
         if not hasattr(self.level, 'grid'):
             print("Lỗi: self.level.grid chưa được khởi tạo trong update_path")
             return
@@ -408,7 +420,10 @@ class Tooth(pygame.sprite.Sprite):
                 self.path = self.local_beam_search(start, target)
         else:
             self.path = []
-
+        end_time = time.time()
+        times = (end_time - start_time) * 1000
+        if times != 0:
+            print(f"[{self.algorithm}] thoi gian tim duong: {times} ms")
 
     def move_along_path(self, dt):
         if vector(self.rect.center).distance_to(self.player.hitbox_rect.center) < self.vision_radius:
@@ -534,7 +549,6 @@ class Shell(pygame.sprite.Sprite):
                     self.state = 'idle'
                     self.has_fired = False
 
-            
             facing_right = self.player.rect.centerx > self.rect.centerx
             self.bullet_direction = 1 if facing_right else -1
             self.image = self.frames[self.state][int(self.frame_index)]
@@ -598,6 +612,7 @@ class Pearl(pygame.sprite.Sprite):
     def dfs(self, start, goal):
         stack = [(start, [start])]
         visited = set()
+        count = 0
         while stack:
             current, path = stack.pop()
             if current == goal:
@@ -605,6 +620,7 @@ class Pearl(pygame.sprite.Sprite):
             if current in visited:
                 continue
             visited.add(current)
+            count += 1
             for neighbor in self.get_neighbors(current):
                 if neighbor not in visited:
                     stack.append((neighbor, path + [neighbor]))
