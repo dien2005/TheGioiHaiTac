@@ -52,7 +52,8 @@
 Hình động dưới đây trình bày cách trò chơi vận hành thực tế.
 ![demo](./img/demo.gif)
 ---
-
+### 🤺Biểu đồ so sánh thuật toán
+![Biểu đồ so sánh](./img/BieuDo.jpg)
 ## 🛠️ Hướng dẫn cài đặt
 
 ### 1. Cài đặt Python
